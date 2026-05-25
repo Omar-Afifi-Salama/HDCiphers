@@ -19,5 +19,5 @@ Unlike traditional libraries restricted to the 26 letters of the English alphabe
 ## 🛠️ Installation
 
 ```bash
-git clone [https://github.com/yourusername/hyper-dynamic-ciphers.git](https://github.com/yourusername/hyper-dynamic-ciphers.git)
-cd hyper-dynamic-ciphers
+git clone https://github.com/Omar-Afifi-Salama/HDCiphers.git
+cd HDCiphers
