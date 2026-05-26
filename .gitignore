@@ -13,6 +13,9 @@ env/
 
 *.ipynb
 
+TODO.txt
+ROADMAP.md
+
 build/
 develop-eggs/
 dist/
