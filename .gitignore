@@ -15,6 +15,7 @@ env/
 
 TODO.txt
 ROADMAP.md
+test_script.py
 
 build/
 develop-eggs/

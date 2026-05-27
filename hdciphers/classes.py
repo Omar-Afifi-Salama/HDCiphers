@@ -763,18 +763,181 @@ class CipherVisualizer:
         sys.stdout.flush()
 
     @classmethod
-    def animate_keystream(cls, cipher_instance, plaintext: str, domain: "Charset", range_set: "Charset", direction: str, delay_seconds: float) -> str:
-        pass
+    def animate_keystream(cls, cipher_instance, plaintext: str, domain: "Charset", range_set: "Charset", direction: str, delay_seconds: float = 0.1) -> str:
+        """Universal visual streaming window optimized for polyalphabetic keystreams."""
+        result = []
+        total_chars = len(plaintext)
+        PREVIEW_LIMIT = 20
+        
+        label_in = "Input" if direction == "encrypt" else "Ciphertext"
+        label_out = "Output" if direction == "encrypt" else "Plaintext"
+        math_func = getattr(cipher_instance, direction)
+
+        # Reconstruct the exact keystream sequence used by the cipher instance
+        # We look up the keyword or stream config safely from the instance
+        if hasattr(cipher_instance, "book_stream"):
+            raw_stream = cipher_instance.book_stream
+        elif hasattr(cipher_instance, "keyword"):
+            if cipher_instance.__class__.__name__ == "Autokey" and direction == "encrypt":
+                clean_plain = [c for c in plaintext if c in domain]
+                raw_stream = cipher_instance.keyword + "".join(clean_plain)
+            else:
+                raw_stream = cipher_instance.keyword
+        else:
+            raw_stream = "constant"
+
+        for i, char in enumerate(plaintext):
+            # Run single character math via the cipher engine
+            single_output = math_func(char, domain, range_set)
+            result.append(single_output)
+            
+            if i < PREVIEW_LIMIT:
+                # Generate a padded list showing the keystream aligned with the input
+                if raw_stream == "constant":
+                    current_key_char = "-"
+                elif cipher_instance.__class__.__name__ == "Autokey" and direction == "decrypt":
+                    # Autokey decryption generates the stream dynamically, so we copy that logic
+                    current_stream = list(cipher_instance.keyword) + result[:-1]
+                    current_key_char = current_stream[i] if i < len(current_stream) else "-"
+                else:
+                    current_key_char = raw_stream[i % len(raw_stream)]
+
+                cls._render_keystream_frame(
+                    cipher_instance, plaintext, result, i, total_chars, 
+                    PREVIEW_LIMIT, label_in, label_out, char, single_output, 
+                    direction, current_key_char, raw_stream
+                )
+                time.sleep(delay_seconds)
+            elif i == PREVIEW_LIMIT:
+                print(f"Fast-forwarding remaining {total_chars - PREVIEW_LIMIT} characters...")
+                
+        print(f"Status: Polyalphabetic {direction} execution complete.\n")
+        return math_func(plaintext, domain, range_set)
+
+    @staticmethod
+    def _render_keystream_frame(cipher_instance, plaintext: str, result: list[str], idx: int, total: int, limit: int, lbl_in: str, lbl_out: str, current_in: str, current_out: str, direction: str, key_char: str, raw_stream: str):
+        """Renders an aligned 3-row telemetry frame tracking text, keystream, and shifts."""
+        if CipherVisualizer._IN_JUPYTER:
+            from IPython.display import clear_output
+            clear_output(wait=True)
+            
+        print(f"[hdciphers] Polyalphabetic Stream: {cipher_instance.__class__.__name__} ({direction.upper()})")
+        print("-" * 60)
+
+        is_cropped = total > limit
+        visible_in = plaintext[:limit] + ("..." if is_cropped else "")
+        pointer_row = "".join(["^" if i == idx else " " for i in range(min(total, limit))])
+        
+        current_preview = "".join(result[:limit]) + plaintext[idx+1:limit]
+        if is_cropped: 
+            current_preview += "..."
+
+        # Generate a visible slice of the repeating/running keystream aligned to the input width
+        visible_key = []
+        for i in range(min(total, limit)):
+            if plaintext[i] == ' ':
+                visible_key.append(" ")
+            else:
+                if raw_stream == "constant":
+                    visible_key.append("-")
+                elif cipher_instance.__class__.__name__ == "Autokey" and direction == "decrypt":
+                    curr = list(cipher_instance.keyword) + result[:i]
+                    visible_key.append(curr[i] if i < len(curr) else "-")
+                else:
+                    visible_key.append(raw_stream[i % len(raw_stream)])
+        visible_key_str = "".join(visible_key) + ("..." if is_cropped else "")
+
+        print(f"{lbl_in:<12}: {visible_in}")
+        print(f"Keystream   : {visible_key_str}")
+        print(f"              {pointer_row}")
+        print(f"{lbl_out:<12}: {current_preview}  (Key: '{key_char}' -> {current_in} to {current_out})")
+        print("-" * 60)
+        sys.stdout.flush()
 
     @classmethod
-    def animate_grid(cls, cipher_instance, plaintext: str, domain: "Charset", range_set: "Charset", direction: str, delay_seconds: float) -> str:
-        pass
+    def animate_grid(cls, cipher_instance, plaintext: str, domain: "Charset", range_set: "Charset", direction: str, delay_seconds: float = 0.5) -> str:
+        """Matrix snapshot engine optimized for structural transposition geometries."""
+        # Transposition structures are chunk-heavy. We can show the operational transition 
+        # from raw state to the fully transposed geometric matrix layout.
+        if cls._IN_JUPYTER:
+            from IPython.display import clear_output
+            clear_output(wait=True)
+
+        print(f"[hdciphers] Transposition Matrix: {cipher_instance.__class__.__name__} ({direction.upper()})")
+        print("-" * 60)
+        print(f"Source Input Block : '{plaintext}'")
+        print("Processing geometric indexes...")
+        sys.stdout.flush()
+        time.sleep(delay_seconds)
+
+        # Trigger the math directly to extract final structural boundaries
+        math_func = getattr(cipher_instance, direction)
+        final_output = math_func(plaintext, domain, range_set)
+
+        if cls._IN_JUPYTER:
+            clear_output(wait=True)
+
+        print(f"[hdciphers] Transposition Matrix: {cipher_instance.__class__.__name__} ({direction.upper()})")
+        print("-" * 60)
+        print(f"Source Input Matrix : '{plaintext}'")
+        print()
+        
+        # Custom structural visualization tailored dynamically to the active cipher geometric type
+        name = cipher_instance.__class__.__name__
+        if name == "Scytale" or name == "Columnar":
+            import math
+            diameter = getattr(cipher_instance, "diameter", 4)
+            cols = math.ceil(len(plaintext) / diameter)
+            padded = plaintext.ljust(cols * diameter, ' ')
+            
+            print("--- Geometrical Grid Layout ---")
+            for r in range(diameter):
+                row_slice = [padded[r * cols + c] for c in range(cols)]
+                print(f"  Row {r}:  [ " + " | ".join(row_slice) + " ]")
+            print()
+            
+        elif name == "Rail Fence":
+            rails = getattr(cipher_instance, "rails", 3)
+            fence = [[' ' for _ in range(len(plaintext))] for _ in range(rails)]
+            rail, direction_sign = 0, 1
+            for i, char in enumerate(plaintext):
+                fence[rail][i] = char if direction == "encrypt" else "*"
+                rail += direction_sign
+                if rail == 0 or rail == rails - 1: direction_sign *= -1
+            
+            print("--- Active Rail Tracking Path ---")
+            for row in fence:
+                print("  " + " ".join(row))
+            print()
+            
+        elif name == "CardGrille":
+            print("--- 2D Rotational Array Plane ---")
+            chunks = [plaintext[i:i+16].ljust(16, ' ') for i in range(0, len(plaintext), 16)]
+            for idx, chunk in enumerate(chunks):
+                print(f" Block {idx}:")
+                for r in range(4):
+                    print("    " + " | ".join(list(chunk[r*4:(r+1)*4])))
+            print()
+
+        print(f"Transposed Output   : '{final_output}'")
+        print("-" * 60)
+        sys.stdout.flush()
+
+        return final_output
 
 class Cipher(ABC):
     
     classification: CipherVisualizer.Types = None
 
+    is_fractionating: bool = False
+
     def _run_encrypt(self, text_obj: Text, visualize: bool = False, delay_seconds: float = 1):
+
+        if text_obj.domain_charset.length != text_obj.range_charset.length and not self.is_fractionating:
+            print(f"[Warning] Charset size mismatch! Domain ({text_obj.domain_charset.length} chars) "
+                  f"does not match Range ({text_obj.range_charset.length} chars). "
+                  f"Decryption data loss may occur.")
+        
         if visualize:
             # Look up the strategy in our dictionary and fire it with direction="encrypt"
             visualizer_func = CipherVisualizer.STRATEGY_MAP.get(self.classification)
